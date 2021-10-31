@@ -1,9 +1,9 @@
 import argparse
 
-from kle_pcbgen import __version__, KLEPCBGenerator
+from kle_pcbgen import KLEPCBGenerator, __version__
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
     """Parse the command line and check that the correct number of arguments is given"""
     parser = argparse.ArgumentParser(
         prog="klepcbgen",
@@ -12,7 +12,8 @@ a keyboard designed using the Keyboard Layout Editor \
 (http://www.keyboard-layout-editor.com/)",
     )
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {__version__}")
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     parser.add_argument(
         "--infile",
         required=True,
@@ -27,7 +28,7 @@ a keyboard designed using the Keyboard Layout Editor \
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """Main"""
     args = get_args()
     kbpcbgen = KLEPCBGenerator(infile=args.infile, outname=args.outname)

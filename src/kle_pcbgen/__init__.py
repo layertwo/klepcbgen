@@ -6,4 +6,4 @@ MAX_ROWS = 12
 MAX_COLS = 18
 
 from .klepcbgenmod import KLEPCBGenerator
-from .cli import *
+from .models import *

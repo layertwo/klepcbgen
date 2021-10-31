@@ -13,7 +13,7 @@ setup(
     # author=AUTHOR,
     # license=LICENSE,
     package_dir={"": "src"},
-    packages=["kle_pcbgen"],
+    packages=find_packages(where="src", exclude=("test",)),
     data_files=data_files,
     python_requires=">=3.7",
     scripts=["bin/pcbgen"],

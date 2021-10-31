@@ -5,82 +5,12 @@ import json
 import math
 import os
 import sys
-from dataclasses import dataclass
-from typing import Any, List
+from typing import List
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from kle_pcbgen import MAX_COLS, MAX_ROWS, __version__
-
-
-class KeyBlockCollection:
-    """Maintains a collection of blocks of keyboard keys, such as columns or rows"""
-
-    def __init__(self):
-        self.blocks = []  # type: List[Any]
-
-    def add_key_to_block(self, block_index: int, key_index: int) -> None:
-        """Add a keyboard key to one of the blocks in the collection at the specified index.
-        If the block does not exist, it gets created at the specified index, inserting a
-        number of empty blocks if necessary"""
-        # Check if the block exists, and add a number of blocks if needed
-        blocks_to_add = (block_index + 1) - len(self.blocks)
-        if blocks_to_add > 0:
-            for _ in range(blocks_to_add):
-                self.blocks.append([])
-        self.blocks[block_index].append(key_index)
-
-    def get_block(self, block_index: int) -> int:
-        """Get the coimplete"""
-        return self.blocks[block_index]
-
-
-class Keyboard:
-    """Represents an entire keyboard layout with all the keys positioned and
-    grouped in rows and columns"""
-
-    def __init__(self, name: str = "", author: str = "") -> None:
-        self.keys = []  # type: List[Key]
-        self.rows = KeyBlockCollection()
-        self.columns = KeyBlockCollection()
-        self.name = name
-        self.author = author
-
-    def add_key_to_row(self, row_index, key_index) -> None:
-        """Add a key to a specific row"""
-        self.rows.add_key_to_block(row_index, key_index)
-
-    def add_key_to_col(self, col_index, key_index) -> None:
-        """Add a key to a specific column"""
-        self.columns.add_key_to_block(col_index, key_index)
-
-    def print_key_info(self):
-        """Print information for this keyboard"""
-
-        print("Keyboard information:")
-        print(f"Name: {self.name}")
-        print(f"Author: {self.author}")
-        print(
-            f"Contains: {len(self.keys)} keys, grouped into {len(self.rows.blocks)} rows and {len(self.columns.blocks)} columns"
-        )
-
-
-@dataclass
-class Key:
-    """All required information about a single keyboard key"""
-
-    x_unit: float
-    y_unit: float
-    width: float
-    height: float
-    num: int
-    legend: str
-    row: int = 0
-    col: int = 0
-    rot: int = 0
-    diodenetnum: int = 0
-    colnetnum: int = 0
-    rownetnum: int = 0
+from kle_pcbgen.models import Key, Keyboard
 
 
 @functools.lru_cache()
@@ -115,7 +45,6 @@ class KLEPCBGenerator:
 
     def __init__(self, infile: str, outname: str) -> None:
         """Set-up directories"""
-        # self.project_dir = Path(__file__).resolve().parent
         self.jinja_env = Environment(
             loader=FileSystemLoader(["configuration/templates"]),
             undefined=StrictUndefined,
@@ -434,7 +363,7 @@ class KLEPCBGenerator:
                     netnum = self.nets.index(rownetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard.keys[key_idx].rownetnum = netnum
+                self.keyboard[key_idx].rownetnum = netnum
 
         for idx, col in enumerate(self.keyboard.columns.blocks):
             colnetname = f"/Col_{idx}"
@@ -443,7 +372,7 @@ class KLEPCBGenerator:
                     netnum = self.nets.index(colnetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard.keys[key_idx].colnetnum = netnum
+                self.keyboard[key_idx].colnetnum = netnum
 
         for idx, diodenum in enumerate(self.keyboard.keys):
             diodenetname = f'"Net-(D{idx}-Pad2)"'
@@ -451,13 +380,13 @@ class KLEPCBGenerator:
                 netnum = self.nets.index(diodenetname) + 1
             except ValueError:
                 netnum = 0
-            self.keyboard.keys[idx].diodenetnum = netnum
+            self.keyboard[idx].diodenetnum = netnum
 
         nets = self.jinja_env.get_template("layout/nets.tpl")
 
         return nets.render(netdeclarations=declarenets, addnets=addnets)
 
-    def generate_layout(self):
+    def generate_layout(self) -> None:
         """Generate layout"""
 
         print("Generating PCB layout ...")
@@ -479,7 +408,7 @@ class KLEPCBGenerator:
                 )
             )
 
-    def generate_project(self):
+    def generate_project(self) -> None:
         """Generate the project file"""
         prj = self.jinja_env.get_template("kicadproject.tpl")
         with open(f"{self.outpath}.pro", "w+", newline="\n") as out_file:
