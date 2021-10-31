@@ -446,12 +446,12 @@ class KLEPCBGenerator:
                 self.keyboard.keys[key_idx].colnetnum = netnum
 
         for idx, diodenum in enumerate(self.keyboard.keys):
-            diodenetname = f'"Net-(D{diodenum}-Pad2)"'
+            diodenetname = f'"Net-(D{idx}-Pad2)"'
             try:
                 netnum = self.nets.index(diodenetname) + 1
             except ValueError:
                 netnum = 0
-            self.keyboard.keys[diodenum].diodenetnum = netnum
+            self.keyboard.keys[idx].diodenetnum = netnum
 
         nets = self.jinja_env.get_template("layout/nets.tpl")
 
