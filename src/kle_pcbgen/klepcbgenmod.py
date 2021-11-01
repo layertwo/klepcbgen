@@ -109,7 +109,7 @@ class KLEPCBGenerator:
                             width=key_width,
                             height=key_height,
                         )
-                        self.keyboard.keys.append(key)
+                        self.keyboard.append(key)
 
                         current_x += key_width
                         key_num += 1
@@ -136,7 +136,7 @@ class KLEPCBGenerator:
         # For each key in the board, determine the X,Y of the center of the key. This determines
         # the row/column a key is in
         keys_in_row = [0] * MAX_ROWS
-        for index, key in enumerate(self.keyboard.keys):
+        for index, key in enumerate(self.keyboard):
             centery = key.y_unit
             row = math.floor(centery)
 
@@ -146,7 +146,7 @@ class KLEPCBGenerator:
                 )
 
             self.keyboard.add_key_to_row(row, index)
-            self.keyboard.keys[index].row = row
+            self.keyboard[index].row = row
 
             col = keys_in_row[row]
             keys_in_row[row] += 1
@@ -157,7 +157,7 @@ class KLEPCBGenerator:
                 )
 
             self.keyboard.add_key_to_col(col, index)
-            self.keyboard.keys[index].col = col
+            self.keyboard[index].col = col
 
     def place_schematic_components(self) -> str:
         """Place schematic components determined by the layout(keyswitches and diodes)"""
@@ -167,7 +167,7 @@ class KLEPCBGenerator:
         components_section = ""
 
         # Place keyswitches and diodes
-        for key in self.keyboard.keys:
+        for key in self.keyboard:
             placement_x = int(600 + key.x_unit * 800)
             placement_y = int(800 + key.y_unit * 500)
 
@@ -223,7 +223,7 @@ class KLEPCBGenerator:
         row_via_offsets = [[-9.68, 9.83], [4.6, 9.83]]
         diode_trace_offsets = [[-6.38, 2.54], [-6.38, 7.77]]
 
-        for key in self.keyboard.keys:
+        for key in self.keyboard:
             # Place switch
             ref_x = -100 + key.x_unit * key_pitch
             ref_y = 17.78 + key.y_unit * key_pitch
@@ -338,7 +338,7 @@ class KLEPCBGenerator:
         for col_num in range(MAX_COLS):
             self.nets.append(f"/Col_{col_num}")
 
-        for diode_num in range(len(self.keyboard.keys)):
+        for diode_num in range(len(self.keyboard)):
             self.nets.append(f'"Net-(D{diode_num}-Pad2)"')
 
     def create_layout_nets(self) -> str:
@@ -356,7 +356,7 @@ class KLEPCBGenerator:
             addnets += f"    (add_net {netname})\n"
 
         # make each key in the board aware in which row/column/diode net it resides
-        for idx, row in enumerate(self.keyboard.rows.blocks):
+        for idx, row in enumerate(self.keyboard.rows):
             rownetname = f"/Row_{idx}"
             for key_idx in row:
                 try:
@@ -365,7 +365,7 @@ class KLEPCBGenerator:
                     netnum = 0
                 self.keyboard[key_idx].rownetnum = netnum
 
-        for idx, col in enumerate(self.keyboard.columns.blocks):
+        for idx, col in enumerate(self.keyboard.columns):
             colnetname = f"/Col_{idx}"
             for key_idx in col:
                 try:
@@ -374,7 +374,7 @@ class KLEPCBGenerator:
                     netnum = 0
                 self.keyboard[key_idx].colnetnum = netnum
 
-        for idx, diodenum in enumerate(self.keyboard.keys):
+        for idx, _ in enumerate(self.keyboard):
             diodenetname = f'"Net-(D{idx}-Pad2)"'
             try:
                 netnum = self.nets.index(diodenetname) + 1

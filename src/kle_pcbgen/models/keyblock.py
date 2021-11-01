@@ -1,23 +1,25 @@
-from typing import Any, List
+from typing import Any, Iterator, List
 
 
 class KeyBlockCollection:
-    """Maintains a collection of blocks of keyboard keys, such as columns or rows"""
+    """Maintains a collection of _blocks of keyboard keys, such as columns or rows"""
 
     def __init__(self) -> None:
-        self.blocks = []  # type: List[Any]
+        self._blocks = []  # type: List[Any]
 
-    def add_key_to_block(self, block_index: int, key_index: int) -> None:
-        """Add a keyboard key to one of the blocks in the collection at the specified index.
-        If the block does not exist, it gets created at the specified index, inserting a
-        number of empty blocks if necessary"""
-        # Check if the block exists, and add a number of blocks if needed
-        blocks_to_add = (block_index + 1) - len(self.blocks)
-        if blocks_to_add > 0:
-            for _ in range(blocks_to_add):
-                self.blocks.append([])
-        self.blocks[block_index].append(key_index)
+    def __getitem__(self, idx: int) -> Any:
+        return self._blocks[idx]
 
-    def get_block(self, block_index: int) -> Any:
-        """Get the coimplete"""
-        return self.blocks[block_index]
+    def __setitem__(self, idx: int, data: Any) -> None:
+        """Add key to one of the _blocks in collection at the specified index.
+        Check if the block exists, and add a number of _blocks if needed"""
+        for _ in range((idx + 1) - len(self._blocks)):
+            self._blocks.append([])
+        self._blocks[idx].append(data)
+
+    def __iter__(self) -> Iterator[Any]:
+        for block in self._blocks:
+            yield block
+
+    def __len__(self) -> int:
+        return len(self._blocks)

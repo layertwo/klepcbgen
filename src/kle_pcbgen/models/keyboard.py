@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Iterator, List
 
 from kle_pcbgen.models.key import Key
 from kle_pcbgen.models.keyblock import KeyBlockCollection
@@ -9,25 +9,35 @@ class Keyboard:
     grouped in rows and columns"""
 
     def __init__(self, name: str = "", author: str = "") -> None:
-        self.keys = []  # type: List[Key]
+        self._keys = []  # type: List[Key]
         self.rows = KeyBlockCollection()
         self.columns = KeyBlockCollection()
         self.name = name
         self.author = author
 
     def __getitem__(self, idx: int) -> Key:
-        return self.keys[idx]
+        return self._keys[idx]
 
     def __setitem__(self, idx: int, data: Any) -> None:
-        self.keys[idx] = data
+        self._keys[idx] = data
 
-    def add_key_to_row(self, row_index: int, key_index: int) -> None:
+    def __iter__(self) -> Iterator[Key]:
+        for key in self._keys:
+            yield key
+
+    def __len__(self) -> int:
+        return len(self._keys)
+
+    def append(self, s: Any) -> None:
+        self._keys.append(s)
+
+    def add_key_to_row(self, idx: int, key_index: int) -> None:
         """Add a key to a specific row"""
-        self.rows.add_key_to_block(row_index, key_index)
+        self.rows[idx] = key_index
 
-    def add_key_to_col(self, col_index: int, key_index: int) -> None:
+    def add_key_to_col(self, idx: int, key_index: int) -> None:
         """Add a key to a specific column"""
-        self.columns.add_key_to_block(col_index, key_index)
+        self.columns[idx] = key_index
 
     def print_key_info(self) -> None:
         """Print information for this keyboard"""
@@ -36,5 +46,5 @@ class Keyboard:
         print(f"Name: {self.name}")
         print(f"Author: {self.author}")
         print(
-            f"Contains: {len(self.keys)} keys, grouped into {len(self.rows.blocks)} rows and {len(self.columns.blocks)} columns"
+            f"Contains: {len(self._keys)} keys, grouped into {len(self.rows)} rows and {len(self.columns)} columns"
         )
