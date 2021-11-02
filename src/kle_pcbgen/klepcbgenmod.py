@@ -5,7 +5,7 @@ import json
 import math
 import os
 import sys
-from typing import List
+from typing import List, Tuple
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -205,7 +205,7 @@ class KLEPCBGenerator:
                 )
             )
 
-    def place_layout_components(self) -> tuple[str, int]:
+    def place_layout_components(self) -> Tuple[str, int]:
         """Place footprint components, traces and vias"""
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
