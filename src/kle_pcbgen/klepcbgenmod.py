@@ -83,6 +83,7 @@ class KLEPCBGenerator:
         current_x = 0.0
         current_y = 0.0
         key_num = 0
+        key_rotation = 0
         for row in kle_json:
             if isinstance(row, list):
                 # Default keysize is 1x1
@@ -100,6 +101,8 @@ class KLEPCBGenerator:
                                 key_width = value
                             elif key == "h":
                                 key_height = value
+                            elif key == "r":
+                                key_rotation = value
                     elif isinstance(item, str):
                         key = Key(
                             num=key_num,
@@ -108,6 +111,7 @@ class KLEPCBGenerator:
                             legend=item,
                             width=key_width,
                             height=key_height,
+                            rotation=key_rotation,
                         )
                         self.keyboard.append(key)
 
@@ -229,6 +233,7 @@ class KLEPCBGenerator:
                     diodenetname=f'"Net-(D{key.num}-Pad2)"',
                     colnetnum=key.colnetnum,
                     colnetname=f"/Col_{key.col}",
+                    rotation=key.rotation,
                     keywidth=unit_width_to_available_footprint(key.width),
                 )
                 + "\n"

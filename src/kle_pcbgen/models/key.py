@@ -13,7 +13,7 @@ class Key:
     legend: str
     row: int = 0
     col: int = 0
-    rot: int = 0
+    rotation: int = 0
     diodenetnum: int = 0
     colnetnum: int = 0
     rownetnum: int = 0
