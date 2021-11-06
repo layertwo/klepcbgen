@@ -108,7 +108,7 @@ class KLEPCBGenerator:
                             num=key_num,
                             x_unit=current_x + key_width / 2,
                             y_unit=current_y + key_height / 2,
-                            legend=item,
+                            legend=item.replace("\n", ""),
                             width=key_width,
                             height=key_height,
                             rotation=key_rotation,
@@ -163,32 +163,24 @@ class KLEPCBGenerator:
             self.keyboard.add_key_to_col(col, index)
             self.keyboard[index].col = col
 
-    def place_schematic_components(self) -> str:
+    @property
+    def schematic_components(self) -> List[str]:
         """Place schematic components determined by the layout(keyswitches and diodes)"""
         switch_tpl = self.jinja_env.get_template("schematic/keyswitch.tpl")
+        components = []
 
-        component_count = 0
-        components_section = ""
-
-        # Place keyswitches and diodes
+        # Place keyswitches
         for key in self.keyboard:
-            placement_x = int(600 + key.x_unit * 800)
-            placement_y = int(800 + key.y_unit * 500)
-
-            components_section += (
-                switch_tpl.render(
-                    num=component_count,
-                    x=placement_x,
-                    y=placement_y,
-                    rowNum=key.row,
-                    colNum=key.col,
-                    keywidth=unit_width_to_available_footprint(key.width),
-                )
-                + "\n"
+            render = switch_tpl.render(
+                num=key.num,
+                x=int(600 + key.x_unit * 800),
+                y=int(800 + key.y_unit * 500),
+                rowNum=key.row,
+                colNum=key.col,
+                keywidth=unit_width_to_available_footprint(key.width),
             )
-            component_count += 1
-
-        return components_section
+            components.append(render)
+        return components
 
     def generate_schematic(self) -> None:
         """Generate schematic"""
@@ -198,7 +190,7 @@ class KLEPCBGenerator:
         with open(f"{self.outpath}.sch", "w+", newline="\n") as out_file:
             out_file.write(
                 schematic.render(
-                    components=self.place_schematic_components(),
+                    components="\n".join(self.schematic_components),
                     controlcircuit=self.jinja_env.get_template(
                         "schematic/controlcircuit.tpl"
                     ).render(),
@@ -209,55 +201,47 @@ class KLEPCBGenerator:
                 )
             )
 
-    def place_layout_components(self) -> Tuple[str, int]:
+    @property
+    def layout_components(self) -> List[str]:
         """Place footprint components"""
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
-        component_count = 0
-        components_section = ""
+        components = []
 
         # Place keyswitches, diodes, vias and traces
         key_pitch = 19.05
         diode_offset = [-6.35, 8.89]
-
         for key in self.keyboard:
             # Place switch
             ref_x = -9.525 + key.x_unit * key_pitch
             ref_y = -9.525 + key.y_unit * key_pitch
-            components_section += (
-                switch.render(
-                    num=component_count,
-                    x=ref_x,
-                    y=ref_y,
-                    diodenetnum=key.diodenetnum,
-                    diodenetname=f'"Net-(D{key.num}-Pad2)"',
-                    colnetnum=key.colnetnum,
-                    colnetname=f"/Col_{key.col}",
-                    rotation=key.rotation,
-                    keywidth=unit_width_to_available_footprint(key.width),
-                )
-                + "\n"
+
+            render = switch.render(
+                num=key.num,
+                x=ref_x,
+                y=ref_y,
+                diodenetnum=key.diodenetnum,
+                diodenetname=f'"Net-(D{key.num}-Pad2)"',
+                colnetnum=key.colnetnum,
+                colnetname=f"/Col_{key.col}",
+                rotation=key.rotation,
+                keywidth=unit_width_to_available_footprint(key.width),
             )
+            components.append(render)
 
             # Place diode
-            diode_x = ref_x + diode_offset[0]
-            diode_y = ref_y + diode_offset[1]
-            components_section += (
-                diode.render(
-                    num=component_count,
-                    x=diode_x,
-                    y=diode_y,
-                    diodenetnum=key.diodenetnum,
-                    diodenetname=f'"Net-(D{key.num}-Pad2)"',
-                    rownetnum=key.rownetnum,
-                    rownetname=f"/Row_{key.row}",
-                )
-                + "\n"
+            render = diode.render(
+                num=key.num,
+                x=ref_x + diode_offset[0],
+                y=ref_y + diode_offset[1],
+                diodenetnum=key.diodenetnum,
+                diodenetname=f'"Net-(D{key.num}-Pad2)"',
+                rownetnum=key.rownetnum,
+                rownetname=f"/Row_{key.row}",
             )
+            components.append(render)
 
-            component_count += 1
-
-        return components_section, component_count
+        return components
 
     def define_nets(self) -> None:
         """Define all the nets for this layout"""
@@ -340,14 +324,14 @@ class KLEPCBGenerator:
         self.define_nets()
         nets = self.create_layout_nets()
 
-        components, numcomponents = self.place_layout_components()
+        components = self.layout_components
         layout = self.jinja_env.get_template("layout/layout.tpl")
         controlcircuit = self.jinja_env.get_template("layout/controlcircuit.tpl")
         with open(f"{self.outpath}.kicad_pcb", "w+", newline="\n") as out_file:
             out_file.write(
                 layout.render(
-                    modules=components,
-                    nummodules=numcomponents,
+                    modules="\n".join(components),
+                    nummodules=len(components),
                     nets=nets,
                     numnets=len(self.nets),
                     controlcircuit=controlcircuit.render(nets=self.nets, startnet=0),
