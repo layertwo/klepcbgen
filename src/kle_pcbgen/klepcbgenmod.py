@@ -206,22 +206,15 @@ class KLEPCBGenerator:
             )
 
     def place_layout_components(self) -> Tuple[str, int]:
-        """Place footprint components, traces and vias"""
+        """Place footprint components"""
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
         component_count = 0
         components_section = ""
 
-        # Load templates for netnames
-        viatpl = self.jinja_env.get_template("layout/via.tpl")
-        tracetpl = self.jinja_env.get_template("layout/trace.tpl")
-
         # Place keyswitches, diodes, vias and traces
         key_pitch = 19.05
         diode_offset = [-6.35, 8.89]
-        col_via_offsets = [[0, -2.03], [0, 12.24]]
-        row_via_offsets = [[-9.68, 9.83], [4.6, 9.83]]
-        diode_trace_offsets = [[-6.38, 2.54], [-6.38, 7.77]]
 
         for key in self.keyboard:
             # Place switch
@@ -256,58 +249,6 @@ class KLEPCBGenerator:
                 )
                 + "\n"
             )
-
-            # Place vias
-            for offset in col_via_offsets:
-                via_x = ref_x + offset[0]
-                via_y = ref_y + offset[1]
-                components_section += (
-                    viatpl.render(x=via_x, y=via_y, netnum=key.colnetnum) + "\n"
-                )
-
-            for offset in row_via_offsets:
-                via_x = ref_x + offset[0]
-                via_y = ref_y + offset[1]
-                components_section += (
-                    viatpl.render(x=via_x, y=via_y, netnum=key.rownetnum) + "\n"
-                )
-
-            # Place traces
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + row_via_offsets[0][0],
-                    y1=ref_y + row_via_offsets[0][1],
-                    x2=ref_x + row_via_offsets[1][0],
-                    y2=ref_y + row_via_offsets[1][1],
-                    layer="B.Cu",
-                    netnum=key.rownetnum,
-                )
-                + "\n"
-            )
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + col_via_offsets[0][0],
-                    y1=ref_y + col_via_offsets[0][1],
-                    x2=ref_x + col_via_offsets[1][0],
-                    y2=ref_y + col_via_offsets[1][1],
-                    layer="F.Cu",
-                    netnum=key.colnetnum,
-                )
-                + "\n"
-            )
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + diode_trace_offsets[0][0],
-                    y1=ref_y + diode_trace_offsets[0][1],
-                    x2=ref_x + diode_trace_offsets[1][0],
-                    y2=ref_y + diode_trace_offsets[1][1],
-                    layer="B.Cu",
-                    netnum=key.diodenetnum,
-                )
-                + "\n"
-            )
-
-            # Place stabilizer mount holes, if necessary
 
             component_count += 1
 
