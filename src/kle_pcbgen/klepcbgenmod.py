@@ -225,8 +225,8 @@ class KLEPCBGenerator:
 
         for key in self.keyboard:
             # Place switch
-            ref_x = -100 + key.x_unit * key_pitch
-            ref_y = 17.78 + key.y_unit * key_pitch
+            ref_x = -9.525 + key.x_unit * key_pitch
+            ref_y = -9.525 + key.y_unit * key_pitch
             components_section += (
                 switch.render(
                     num=component_count,
