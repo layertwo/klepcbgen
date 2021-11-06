@@ -1,6 +1,5 @@
 """Generate a KiCad project from a Keyboard Leyout Editor json input layout"""
 import datetime
-import functools
 import json
 import math
 import os
@@ -11,33 +10,6 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from kle_pcbgen import MAX_COLS, MAX_ROWS, __version__
 from kle_pcbgen.models import Key, Keyboard
-
-
-@functools.lru_cache()
-def unit_width_to_available_footprint(unit_width: float) -> str:
-    """Convert a key width in standard keyboard units to the width of the kicad
-    footprint to use"""
-
-    # This may not be the appropriate size for everything >= 6.25, but this
-    # is what we have
-    width = "6.25"
-    if unit_width < 1.25:
-        width = "1.00"
-    elif unit_width < 1.5:
-        width = "1.25"
-    elif unit_width < 1.75:
-        width = "1.50"
-    elif unit_width < 2:
-        width = "1.75"
-    elif unit_width < 2.25:
-        width = "2.00"
-    elif unit_width < 2.75:
-        width = "2.25"
-    elif unit_width < 6.25:
-        # This may not be the appropriate size for everything between 2.75 and
-        # 6.25, but this is what we have
-        width = "2.75"
-    return width
 
 
 class KLEPCBGenerator:
@@ -104,8 +76,10 @@ class KLEPCBGenerator:
                             elif key == "r":
                                 key_rotation = value
                     elif isinstance(item, str):
+                        if key_height > 1:
+                            print("key_height > 1", key_height)
                         key = Key(
-                            num=key_num,
+                            number=key_num,
                             x_unit=current_x + key_width / 2,
                             y_unit=current_y + key_height / 2,
                             legend=item.replace("\n", ""),
@@ -141,8 +115,7 @@ class KLEPCBGenerator:
         # the row/column a key is in
         keys_in_row = [0] * MAX_ROWS
         for index, key in enumerate(self.keyboard):
-            centery = key.y_unit
-            row = math.floor(centery)
+            row = math.floor(key.y_unit)
 
             if row > MAX_ROWS - 1:
                 sys.exit(
@@ -161,7 +134,7 @@ class KLEPCBGenerator:
                 )
 
             self.keyboard.add_key_to_col(col, index)
-            self.keyboard[index].col = col
+            self.keyboard[index].column = col
 
     @property
     def schematic_components(self) -> List[str]:
@@ -172,12 +145,12 @@ class KLEPCBGenerator:
         # Place keyswitches
         for key in self.keyboard:
             render = switch_tpl.render(
-                num=key.num,
+                num=key.number,
                 x=int(600 + key.x_unit * 800),
                 y=int(800 + key.y_unit * 500),
                 rowNum=key.row,
-                colNum=key.col,
-                keywidth=unit_width_to_available_footprint(key.width),
+                colNum=key.column,
+                width=key.width,
             )
             components.append(render)
         return components
@@ -215,27 +188,20 @@ class KLEPCBGenerator:
             # Place switch
             ref_x = -9.525 + key.x_unit * key_pitch
             ref_y = -9.525 + key.y_unit * key_pitch
-
             render = switch.render(
-                num=key.num,
+                key=key,
                 x=ref_x,
                 y=ref_y,
-                diodenetnum=key.diodenetnum,
-                diodenetname=f'"Net-(D{key.num}-Pad2)"',
-                colnetnum=key.colnetnum,
-                colnetname=f"/Col_{key.col}",
-                rotation=key.rotation,
-                keywidth=unit_width_to_available_footprint(key.width),
             )
             components.append(render)
 
             # Place diode
             render = diode.render(
-                num=key.num,
+                num=key.number,
                 x=ref_x + diode_offset[0],
                 y=ref_y + diode_offset[1],
                 diodenetnum=key.diodenetnum,
-                diodenetname=f'"Net-(D{key.num}-Pad2)"',
+                diodenetname=f'"Net-(D{key.number}-Pad2)"',
                 rownetnum=key.rownetnum,
                 rownetname=f"/Row_{key.row}",
             )
