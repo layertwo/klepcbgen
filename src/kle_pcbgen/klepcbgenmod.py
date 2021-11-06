@@ -5,7 +5,7 @@ import json
 import math
 import os
 import sys
-from typing import List, Tuple
+from typing import List
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -190,7 +190,7 @@ class KLEPCBGenerator:
         with open(f"{self.outpath}.sch", "w+", newline="\n") as out_file:
             out_file.write(
                 schematic.render(
-                    components="\n".join(self.schematic_components),
+                    components=self.schematic_components,
                     controlcircuit=self.jinja_env.get_template(
                         "schematic/controlcircuit.tpl"
                     ).render(),
@@ -324,16 +324,13 @@ class KLEPCBGenerator:
         self.define_nets()
         nets = self.create_layout_nets()
 
-        components = self.layout_components
         layout = self.jinja_env.get_template("layout/layout.tpl")
         controlcircuit = self.jinja_env.get_template("layout/controlcircuit.tpl")
         with open(f"{self.outpath}.kicad_pcb", "w+", newline="\n") as out_file:
             out_file.write(
                 layout.render(
-                    modules="\n".join(components),
-                    nummodules=len(components),
+                    modules=self.layout_components,
                     nets=nets,
-                    numnets=len(self.nets),
                     controlcircuit=controlcircuit.render(nets=self.nets, startnet=0),
                 )
             )
