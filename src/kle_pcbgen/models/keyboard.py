@@ -1,7 +1,7 @@
 from itertools import groupby
 from operator import attrgetter
 from pprint import pformat
-from typing import Any, Dict, Iterator, List
+from typing import Any, Iterator, List
 
 from kle_pcbgen.models.key import Key
 
@@ -12,8 +12,8 @@ class Keyboard:
 
     def __init__(self, name: str = "", author: str = "") -> None:
         self._keys = []  # type: List[Key]
-        self._rows = []
-        self._columns = []
+        self._rows = []  # type: List[List[Key]]
+        self._columns = [] # type: List[List[Key]]
         self.name = name
         self.author = author
 
@@ -30,7 +30,7 @@ class Keyboard:
     def __len__(self) -> int:
         return len(self._keys)
 
-    def __repr__(self) -> Dict:
+    def __repr__(self) -> str:
         return pformat({"name": self.name, "author": self.author, "keys": self._keys})
 
     def append(self, s: Any) -> None:
