@@ -144,6 +144,7 @@ class KLEPCBGenerator:
     @property
     def layout_components(self) -> List[str]:
         """Place footprint components"""
+        #add selection for footprint here.
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
         components = []
