@@ -1,7 +1,9 @@
-from typing import Any, Iterator, List
+from itertools import groupby
+from operator import attrgetter
+from pprint import pformat
+from typing import Any, Dict, Iterator, List
 
 from kle_pcbgen.models.key import Key
-from kle_pcbgen.models.keyblock import KeyBlockCollection
 
 
 class Keyboard:
@@ -10,8 +12,8 @@ class Keyboard:
 
     def __init__(self, name: str = "", author: str = "") -> None:
         self._keys = []  # type: List[Key]
-        self.rows = KeyBlockCollection()
-        self.columns = KeyBlockCollection()
+        self._rows = []
+        self._columns = []
         self.name = name
         self.author = author
 
@@ -28,16 +30,35 @@ class Keyboard:
     def __len__(self) -> int:
         return len(self._keys)
 
+    def __repr__(self) -> Dict:
+        return pformat({"name": self.name, "author": self.author, "keys": self._keys})
+
     def append(self, s: Any) -> None:
         self._keys.append(s)
 
-    def add_key_to_row(self, idx: int, key_index: int) -> None:
-        """Add a key to a specific row"""
-        self.rows[idx] = key_index
+    @property
+    def rows(self):
+        """Keyboard rows"""
+        if not self._rows:
+            self._rows = [
+                list(g) for _, g in groupby(self._keys, key=attrgetter("row"))
+            ]
+        return self._rows
 
-    def add_key_to_col(self, idx: int, key_index: int) -> None:
-        """Add a key to a specific column"""
-        self.columns[idx] = key_index
+    @property
+    def columns(self):
+        """Keyboard columns"""
+        if not self._columns:
+            for row in self.rows:
+                for _key, col in zip(row, range(len(row))):
+                    _key.column = col
+            self._columns = [
+                list(g)
+                for _, g in groupby(
+                    sorted(self._keys, key=attrgetter("column")), attrgetter("column")
+                )
+            ]
+        return self._columns
 
     def print_key_info(self) -> None:
         """Print information for this keyboard"""

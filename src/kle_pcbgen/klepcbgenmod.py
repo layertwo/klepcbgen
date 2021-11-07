@@ -1,7 +1,6 @@
 """Generate a KiCad project from a Keyboard Leyout Editor json input layout"""
 import datetime
 import json
-import math
 import os
 import sys
 from typing import List
@@ -37,7 +36,6 @@ class KLEPCBGenerator:
             os.mkdir(self.outname)
 
         self.read_kle_json()
-        self.generate_rows_and_columns()
         self.generate_schematic()
         self.generate_layout()
         self.generate_project()
@@ -104,37 +102,6 @@ class KLEPCBGenerator:
                     self.keyboard.name = row["name"]
                 if "author" in row:
                     self.keyboard.author = row["author"]
-
-    def generate_rows_and_columns(self) -> None:
-        """Group keys in rows and columns based on the position of the center of the switch in a
-        grid"""
-
-        print("Grouping keys in rows and columns ... ")
-
-        # For each key in the board, determine the X,Y of the center of the key. This determines
-        # the row/column a key is in
-        keys_in_row = [0] * MAX_ROWS
-        for index, key in enumerate(self.keyboard):
-            row = math.floor(key.y_unit)
-
-            if row > MAX_ROWS - 1:
-                sys.exit(
-                    "ERROR: Key placement produced too many rows. klepcbgen currently cannot generate a valid KiCad project for this keyboard layout.\nExiting ..."
-                )
-
-            self.keyboard.add_key_to_row(row, index)
-            self.keyboard[index].row = row
-
-            col = keys_in_row[row]
-            keys_in_row[row] += 1
-
-            if col > MAX_COLS - 1:
-                sys.exit(
-                    "ERROR: Key placement produced too many columns. klepcbgen currently cannot generate a valid KiCad project for this keyboard layout.\nExiting ..."
-                )
-
-            self.keyboard.add_key_to_col(col, index)
-            self.keyboard[index].column = col
 
     @property
     def schematic_components(self) -> List[str]:
@@ -254,29 +221,29 @@ class KLEPCBGenerator:
         # make each key in the board aware in which row/column/diode net it resides
         for idx, row in enumerate(self.keyboard.rows):
             rownetname = f"/Row_{idx}"
-            for key_idx in row:
+            for key in row:
                 try:
                     netnum = self.nets.index(rownetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard[key_idx].rownetnum = netnum
+                key.rownetnum = netnum
 
         for idx, col in enumerate(self.keyboard.columns):
             colnetname = f"/Col_{idx}"
-            for key_idx in col:
+            for key in col:
                 try:
                     netnum = self.nets.index(colnetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard[key_idx].colnetnum = netnum
+                key.colnetnum = netnum
 
-        for idx, _ in enumerate(self.keyboard):
-            diodenetname = f'"Net-(D{idx}-Pad2)"'
+        for key in self.keyboard:
+            diodenetname = f'"Net-(D{key.number}-Pad2)"'
             try:
                 netnum = self.nets.index(diodenetname) + 1
             except ValueError:
                 netnum = 0
-            self.keyboard[idx].diodenetnum = netnum
+            key.diodenetnum = netnum
 
         nets = self.jinja_env.get_template("layout/nets.tpl")
 
@@ -284,7 +251,6 @@ class KLEPCBGenerator:
 
     def generate_layout(self) -> None:
         """Generate layout"""
-
         print("Generating PCB layout ...")
 
         self.define_nets()
