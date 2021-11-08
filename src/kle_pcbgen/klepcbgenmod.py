@@ -1,43 +1,14 @@
 """Generate a KiCad project from a Keyboard Leyout Editor json input layout"""
 import datetime
-import functools
 import json
-import math
 import os
 import sys
-from typing import List, Tuple
+from typing import List
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from kle_pcbgen import MAX_COLS, MAX_ROWS, __version__
 from kle_pcbgen.models import Key, Keyboard
-
-
-@functools.lru_cache()
-def unit_width_to_available_footprint(unit_width: float) -> str:
-    """Convert a key width in standard keyboard units to the width of the kicad
-    footprint to use"""
-
-    # This may not be the appropriate size for everything >= 6.25, but this
-    # is what we have
-    width = "6.25"
-    if unit_width < 1.25:
-        width = "1.00"
-    elif unit_width < 1.5:
-        width = "1.25"
-    elif unit_width < 1.75:
-        width = "1.50"
-    elif unit_width < 2:
-        width = "1.75"
-    elif unit_width < 2.25:
-        width = "2.00"
-    elif unit_width < 2.75:
-        width = "2.25"
-    elif unit_width < 6.25:
-        # This may not be the appropriate size for everything between 2.75 and
-        # 6.25, but this is what we have
-        width = "2.75"
-    return width
 
 
 class KLEPCBGenerator:
@@ -65,7 +36,6 @@ class KLEPCBGenerator:
             os.mkdir(self.outname)
 
         self.read_kle_json()
-        self.generate_rows_and_columns()
         self.generate_schematic()
         self.generate_layout()
         self.generate_project()
@@ -83,6 +53,7 @@ class KLEPCBGenerator:
         current_x = 0.0
         current_y = 0.0
         key_num = 0
+        key_rotation = 0
         for row in kle_json:
             if isinstance(row, list):
                 # Default keysize is 1x1
@@ -100,14 +71,19 @@ class KLEPCBGenerator:
                                 key_width = value
                             elif key == "h":
                                 key_height = value
+                            elif key == "r":
+                                key_rotation = value
                     elif isinstance(item, str):
+                        if key_height > 1:
+                            print("key_height > 1", key_height)
                         key = Key(
-                            num=key_num,
+                            number=key_num,
                             x_unit=current_x + key_width / 2,
                             y_unit=current_y + key_height / 2,
-                            legend=item,
+                            legend=item.replace("\n", ""),
                             width=key_width,
                             height=key_height,
+                            rotation=key_rotation,
                         )
                         self.keyboard.append(key)
 
@@ -127,64 +103,24 @@ class KLEPCBGenerator:
                 if "author" in row:
                     self.keyboard.author = row["author"]
 
-    def generate_rows_and_columns(self) -> None:
-        """Group keys in rows and columns based on the position of the center of the switch in a
-        grid"""
-
-        print("Grouping keys in rows and columns ... ")
-
-        # For each key in the board, determine the X,Y of the center of the key. This determines
-        # the row/column a key is in
-        keys_in_row = [0] * MAX_ROWS
-        for index, key in enumerate(self.keyboard):
-            centery = key.y_unit
-            row = math.floor(centery)
-
-            if row > MAX_ROWS - 1:
-                sys.exit(
-                    "ERROR: Key placement produced too many rows. klepcbgen currently cannot generate a valid KiCad project for this keyboard layout.\nExiting ..."
-                )
-
-            self.keyboard.add_key_to_row(row, index)
-            self.keyboard[index].row = row
-
-            col = keys_in_row[row]
-            keys_in_row[row] += 1
-
-            if col > MAX_COLS - 1:
-                sys.exit(
-                    "ERROR: Key placement produced too many columns. klepcbgen currently cannot generate a valid KiCad project for this keyboard layout.\nExiting ..."
-                )
-
-            self.keyboard.add_key_to_col(col, index)
-            self.keyboard[index].col = col
-
-    def place_schematic_components(self) -> str:
+    @property
+    def schematic_components(self) -> List[str]:
         """Place schematic components determined by the layout(keyswitches and diodes)"""
         switch_tpl = self.jinja_env.get_template("schematic/keyswitch.tpl")
+        components = []
 
-        component_count = 0
-        components_section = ""
-
-        # Place keyswitches and diodes
+        # Place keyswitches
         for key in self.keyboard:
-            placement_x = int(600 + key.x_unit * 800)
-            placement_y = int(800 + key.y_unit * 500)
-
-            components_section += (
-                switch_tpl.render(
-                    num=component_count,
-                    x=placement_x,
-                    y=placement_y,
-                    rowNum=key.row,
-                    colNum=key.col,
-                    keywidth=unit_width_to_available_footprint(key.width),
-                )
-                + "\n"
+            render = switch_tpl.render(
+                num=key.number,
+                x=int(600 + key.x_unit * 800),
+                y=int(800 + key.y_unit * 500),
+                rowNum=key.row,
+                colNum=key.column,
+                width=key.width,
             )
-            component_count += 1
-
-        return components_section
+            components.append(render)
+        return components
 
     def generate_schematic(self) -> None:
         """Generate schematic"""
@@ -194,7 +130,7 @@ class KLEPCBGenerator:
         with open(f"{self.outpath}.sch", "w+", newline="\n") as out_file:
             out_file.write(
                 schematic.render(
-                    components=self.place_schematic_components(),
+                    components=self.schematic_components,
                     controlcircuit=self.jinja_env.get_template(
                         "schematic/controlcircuit.tpl"
                     ).render(),
@@ -205,113 +141,41 @@ class KLEPCBGenerator:
                 )
             )
 
-    def place_layout_components(self) -> Tuple[str, int]:
-        """Place footprint components, traces and vias"""
+    @property
+    def layout_components(self) -> List[str]:
+        """Place footprint components"""
+        #add selection for footprint here.
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
-        component_count = 0
-        components_section = ""
-
-        # Load templates for netnames
-        viatpl = self.jinja_env.get_template("layout/via.tpl")
-        tracetpl = self.jinja_env.get_template("layout/trace.tpl")
+        components = []
 
         # Place keyswitches, diodes, vias and traces
         key_pitch = 19.05
         diode_offset = [-6.35, 8.89]
-        col_via_offsets = [[0, -2.03], [0, 12.24]]
-        row_via_offsets = [[-9.68, 9.83], [4.6, 9.83]]
-        diode_trace_offsets = [[-6.38, 2.54], [-6.38, 7.77]]
-
         for key in self.keyboard:
             # Place switch
-            ref_x = -100 + key.x_unit * key_pitch
-            ref_y = 17.78 + key.y_unit * key_pitch
-            components_section += (
-                switch.render(
-                    num=component_count,
-                    x=ref_x,
-                    y=ref_y,
-                    diodenetnum=key.diodenetnum,
-                    diodenetname=f'"Net-(D{key.num}-Pad2)"',
-                    colnetnum=key.colnetnum,
-                    colnetname=f"/Col_{key.col}",
-                    keywidth=unit_width_to_available_footprint(key.width),
-                )
-                + "\n"
+            ref_x = -9.525 + key.x_unit * key_pitch
+            ref_y = -9.525 + key.y_unit * key_pitch
+            render = switch.render(
+                key=key,
+                x=ref_x,
+                y=ref_y,
             )
+            components.append(render)
 
             # Place diode
-            diode_x = ref_x + diode_offset[0]
-            diode_y = ref_y + diode_offset[1]
-            components_section += (
-                diode.render(
-                    num=component_count,
-                    x=diode_x,
-                    y=diode_y,
-                    diodenetnum=key.diodenetnum,
-                    diodenetname=f'"Net-(D{key.num}-Pad2)"',
-                    rownetnum=key.rownetnum,
-                    rownetname=f"/Row_{key.row}",
-                )
-                + "\n"
+            render = diode.render(
+                num=key.number,
+                x=ref_x + diode_offset[0],
+                y=ref_y + diode_offset[1],
+                diodenetnum=key.diodenetnum,
+                diodenetname=f'"Net-(D{key.number}-Pad2)"',
+                rownetnum=key.rownetnum,
+                rownetname=f"/Row_{key.row}",
             )
+            components.append(render)
 
-            # Place vias
-            for offset in col_via_offsets:
-                via_x = ref_x + offset[0]
-                via_y = ref_y + offset[1]
-                components_section += (
-                    viatpl.render(x=via_x, y=via_y, netnum=key.colnetnum) + "\n"
-                )
-
-            for offset in row_via_offsets:
-                via_x = ref_x + offset[0]
-                via_y = ref_y + offset[1]
-                components_section += (
-                    viatpl.render(x=via_x, y=via_y, netnum=key.rownetnum) + "\n"
-                )
-
-            # Place traces
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + row_via_offsets[0][0],
-                    y1=ref_y + row_via_offsets[0][1],
-                    x2=ref_x + row_via_offsets[1][0],
-                    y2=ref_y + row_via_offsets[1][1],
-                    layer="B.Cu",
-                    netnum=key.rownetnum,
-                )
-                + "\n"
-            )
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + col_via_offsets[0][0],
-                    y1=ref_y + col_via_offsets[0][1],
-                    x2=ref_x + col_via_offsets[1][0],
-                    y2=ref_y + col_via_offsets[1][1],
-                    layer="F.Cu",
-                    netnum=key.colnetnum,
-                )
-                + "\n"
-            )
-            components_section += (
-                tracetpl.render(
-                    x1=ref_x + diode_trace_offsets[0][0],
-                    y1=ref_y + diode_trace_offsets[0][1],
-                    x2=ref_x + diode_trace_offsets[1][0],
-                    y2=ref_y + diode_trace_offsets[1][1],
-                    layer="B.Cu",
-                    netnum=key.diodenetnum,
-                )
-                + "\n"
-            )
-
-            # Place stabilizer mount holes, if necessary
-
-            component_count += 1
-
-        return components_section, component_count
+        return components
 
     def define_nets(self) -> None:
         """Define all the nets for this layout"""
@@ -358,29 +222,29 @@ class KLEPCBGenerator:
         # make each key in the board aware in which row/column/diode net it resides
         for idx, row in enumerate(self.keyboard.rows):
             rownetname = f"/Row_{idx}"
-            for key_idx in row:
+            for key in row:
                 try:
                     netnum = self.nets.index(rownetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard[key_idx].rownetnum = netnum
+                key.rownetnum = netnum
 
         for idx, col in enumerate(self.keyboard.columns):
             colnetname = f"/Col_{idx}"
-            for key_idx in col:
+            for key in col:
                 try:
                     netnum = self.nets.index(colnetname) + 1
                 except ValueError:
                     netnum = 0
-                self.keyboard[key_idx].colnetnum = netnum
+                key.colnetnum = netnum
 
-        for idx, _ in enumerate(self.keyboard):
-            diodenetname = f'"Net-(D{idx}-Pad2)"'
+        for key in self.keyboard:
+            diodenetname = f'"Net-(D{key.number}-Pad2)"'
             try:
                 netnum = self.nets.index(diodenetname) + 1
             except ValueError:
                 netnum = 0
-            self.keyboard[idx].diodenetnum = netnum
+            key.diodenetnum = netnum
 
         nets = self.jinja_env.get_template("layout/nets.tpl")
 
@@ -388,22 +252,18 @@ class KLEPCBGenerator:
 
     def generate_layout(self) -> None:
         """Generate layout"""
-
         print("Generating PCB layout ...")
 
         self.define_nets()
         nets = self.create_layout_nets()
 
-        components, numcomponents = self.place_layout_components()
         layout = self.jinja_env.get_template("layout/layout.tpl")
         controlcircuit = self.jinja_env.get_template("layout/controlcircuit.tpl")
         with open(f"{self.outpath}.kicad_pcb", "w+", newline="\n") as out_file:
             out_file.write(
                 layout.render(
-                    modules=components,
-                    nummodules=numcomponents,
+                    modules=self.layout_components,
                     nets=nets,
-                    numnets=len(self.nets),
                     controlcircuit=controlcircuit.render(nets=self.nets, startnet=0),
                 )
             )

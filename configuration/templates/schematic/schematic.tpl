@@ -13,6 +13,8 @@ Comment2 "{{comment}}"
 Comment3 ""
 Comment4 ""
 $EndDescr
-{{components}}
+{% for component in components %}
+{{component}}
+{% endfor %}
 {{controlcircuit}}
 $EndSCHEMATC

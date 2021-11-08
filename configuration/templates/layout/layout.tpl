@@ -5,8 +5,8 @@
     (drawings 0)
     (tracks 0)
     (zones 0)
-    (modules {{nummodules}})
-    (nets {{numnets}})
+    (modules {{ modules|length }})
+    (nets {{ nets|length }})
   )
 
   (page A3)
@@ -92,7 +92,9 @@
 
 {{nets}}
 
-{{modules}}
+{% for module in modules %}
+{{module}}
+{% endfor %}
 
 {{controlcircuit}}
 
