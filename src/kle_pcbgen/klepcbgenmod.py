@@ -36,6 +36,7 @@ class KLEPCBGenerator:
             os.mkdir(self.outname)
 
         self.read_kle_json()
+        self.keyboard.generate_matrix()
         self.generate_schematic()
         self.generate_layout()
         self.generate_project()
@@ -144,7 +145,7 @@ class KLEPCBGenerator:
     @property
     def layout_components(self) -> List[str]:
         """Place footprint components"""
-        #add selection for footprint here.
+        # add selection for footprint here.
         switch = self.jinja_env.get_template("layout/keyswitch.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
         components = []
