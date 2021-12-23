@@ -23,7 +23,8 @@ class Key:
 
     @property
     def row(self) -> int:
-        return math.floor(self.y_unit)
+        #return math.floor(self.y_unit)
+        return round(self.y_unit)
 
     @property
     def column(self) -> int:
@@ -31,7 +32,10 @@ class Key:
 
     @column.setter
     def column(self, value: int):
-        self._column = value
+        if value < 0:
+            self._column = 0
+        else:
+            self._column = value
 
     def __repr__(self) -> str:
         data = vars(self)
