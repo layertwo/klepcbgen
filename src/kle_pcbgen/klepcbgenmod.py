@@ -11,6 +11,7 @@ from kle_pcbgen import MAX_COLS, MAX_ROWS, __version__
 from kle_pcbgen.models import Key, Keyboard
 
 
+
 class KLEPCBGenerator:
     """KLE PCB Generator"""
 
@@ -28,6 +29,17 @@ class KLEPCBGenerator:
         self.outpath = os.path.join(
             outname, os.path.basename(os.path.normpath(self.outname))
         )
+        #needs cleanup but assigning net id based on row fixes the weird issues we saw.
+        self.net_row_names = {'0': 15,
+            '1': 16,
+            '2': 17,
+            '3': 18,
+            '4': 19,
+            '5': 20,
+            '6': 21,
+            '7': 22,
+            '8': 23,
+            '9': 24}
 
     def generate_kicadproject(self) -> None:
         """Generate the kicad project. Main entry point"""
@@ -146,7 +158,7 @@ class KLEPCBGenerator:
     def layout_components(self) -> List[str]:
         """Place footprint components"""
         # add selection for footprint here.
-        switch = self.jinja_env.get_template("layout/keyswitch.tpl")
+        switch = self.jinja_env.get_template("layout/mx_hotswap.tpl")
         diode = self.jinja_env.get_template("layout/diode.tpl")
         components = []
 
@@ -206,6 +218,7 @@ class KLEPCBGenerator:
         for diode_num in range(len(self.keyboard)):
             self.nets.append(f'"Net-(D{diode_num}-Pad2)"')
 
+
     def create_layout_nets(self) -> str:
         """Create the list of nets in the layout"""
         addnets = ""
@@ -219,13 +232,13 @@ class KLEPCBGenerator:
                 netname = "UNKNOWN"
             declarenets += f"  (net {idx+1} {netname})\n"
             addnets += f"    (add_net {netname})\n"
-
         # make each key in the board aware in which row/column/diode net it resides
         for idx, row in enumerate(self.keyboard.rows):
             rownetname = f"/Row_{idx}"
             for key in row:
                 try:
-                    netnum = self.nets.index(rownetname) + 1
+                    netnum = self.net_row_names[str(key.row)]
+
                 except ValueError:
                     netnum = 0
                 key.rownetnum = netnum
@@ -274,3 +287,5 @@ class KLEPCBGenerator:
         prj = self.jinja_env.get_template("kicadproject.tpl")
         with open(f"{self.outpath}.pro", "w+", newline="\n") as out_file:
             out_file.write(prj.render())
+
+
