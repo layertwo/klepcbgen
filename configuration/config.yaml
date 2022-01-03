@@ -1,0 +1,8 @@
+[settings]
+switch_footprint: mx_hotswap
+diode_footprint: smd
+vert_pitch: 19.05
+horz_pitch: 19.05
+diode_x: 0
+diode_y: 5
+diode_or: 0

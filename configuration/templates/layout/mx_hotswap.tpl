@@ -3,7 +3,7 @@
 (descr "MX-style keyswitch with socket mount fixed")
   (tags MX,cherry,gateron,kailh,pg1511,socket)
   (attr smd)
-  (fp_text reference REF** (at 0 -8.255 {{key.rotation}}) (layer F.SilkS) hide
+  (fp_text reference K{{key.number}} (at 0 -8.255 {{key.rotation}}) (layer F.SilkS) hide
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (fp_text value Kailh_socket_MX_fixed (at 0 8.255 {{key.rotation}}) (layer F.Fab)
@@ -56,8 +56,11 @@
   (fp_line (start 7.5 -7.5) (end 7.5 7.5) (layer F.Fab) (width 0.15))
   (fp_line (start -7.5 -7.5) (end 7.5 -7.5) (layer F.Fab) (width 0.15))
   (fp_line (start 7.5 7.5) (end -7.5 7.5) (layer F.Fab) (width 0.15))
-  (pad 1 smd rect (at -7.56 -2.54 {{key.rotation}}) (size 2.55 2.5) (layers B.Cu B.Paste B.Mask))
-  (pad 2 smd rect (at 6.29 -5.08 {{key.rotation}}) (size 2.55 2.5) (layers B.Cu B.Paste B.Mask))
+  (pad 1 smd rect (at -7.56 -2.54 {{key.rotation}}) (size 2.55 2.5) (layers B.Cu B.Paste B.Mask)
+  (net {{key.colnetnum}} /Col_{{key.column}}))
+  
+  (pad 2 smd rect (at 6.29 -5.08 {{key.rotation}}) (size 2.55 2.5) (layers B.Cu B.Paste B.Mask)
+  (net {{key.diodenetnum}} "Net-(D{{key.number}}-Pad2)"))
   (pad "" np_thru_hole circle (at 2.54 -5.08 {{key.rotation}}) (size 3 3) (drill 3) (layers *.Cu *.Mask))
   (pad "" np_thru_hole circle (at -3.81 -2.54 {{key.rotation}}) (size 3 3) (drill 3) (layers *.Cu *.Mask))
   (pad "" np_thru_hole circle (at 0 0 {{key.rotation}}) (size 3.9878 3.9878) (drill 3.9878) (layers *.Cu *.Mask))
@@ -66,3 +69,4 @@
   (pad 1 thru_hole rect (at -8.2 -2.53 {{key.rotation}}) (size 1.25 1.25) (drill 1) (layers *.Cu *.Mask))
   (pad 4 thru_hole rect (at 6.85 -5 {{key.rotation}}) (size 1.25 1.25) (drill 1) (layers *.Cu *.Mask))
 )
+

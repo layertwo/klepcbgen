@@ -9,15 +9,17 @@ class Key:
 
     x_unit: float
     y_unit: float
-    width: float
-    height: float
     number: int
     legend: str
+    width: float = 1.0
+    height: float = 1.0
     _column: int = 0
     rotation: int = 0
     diodenetnum: int = 0
     colnetnum: int = 0
     rownetnum: int = 0
+    x2_unit: float = 0.0
+    y2_unit: float = 0.0
 
     @property
     def row(self) -> int:
@@ -29,7 +31,13 @@ class Key:
 
     @column.setter
     def column(self, value: int):
-        self._column = value
+        if value < 0:
+            self._column = 0
+        else:
+            self._column = value
 
-    def __repr__(self):
-        return pformat(vars(self))
+    def __repr__(self) -> str:
+        data = vars(self)
+        data["column"] = self._column
+        data["row"] = self.row
+        return pformat(data)
