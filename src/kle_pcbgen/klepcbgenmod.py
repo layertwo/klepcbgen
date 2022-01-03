@@ -1,9 +1,10 @@
 """Generate a KiCad project from a Keyboard Leyout Editor json input layout"""
+import configparser
 import datetime
 import json
 import os
 import sys
-from typing import List
+from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -28,6 +29,8 @@ class KLEPCBGenerator:
         self.outpath = os.path.join(
             outname, os.path.basename(os.path.normpath(self.outname))
         )
+        self.settings = {}  # type: Dict[str, Any]
+        self.parse_config()
         # needs cleanup but assigning net id based on row fixes the weird issues we saw.
         self.net_row_names = {
             "0": 15,
@@ -41,6 +44,14 @@ class KLEPCBGenerator:
             "8": 23,
             "9": 24,
         }
+
+    def parse_config(self, filename="configuration/config.yaml"):
+        """parse the config.yaml file for values to customize pcb generator"""
+        config = configparser.ConfigParser()
+        config.sections()
+        config.read(filename)
+        for key in config["settings"]:
+            self.settings[key] = config["settings"][key]
 
     def generate_kicadproject(self) -> None:
         """Generate the kicad project. Main entry point"""
@@ -159,33 +170,50 @@ class KLEPCBGenerator:
     def layout_components(self) -> List[str]:
         """Place footprint components"""
         # add selection for footprint here.
-        switch = self.jinja_env.get_template("layout/mx_hotswap.tpl")
-        diode = self.jinja_env.get_template("layout/diode.tpl")
+        # TODO: select these templates in config file
+        try:
+            switch = self.jinja_env.get_template(
+                f"layout/{self.settings['switch_footprint']}.tpl"
+            )
+        except:
+            self.jinja_env.get_template("layout/keyswitch.tpl")
+
+        try:
+            diode = self.jinja_env.get_template(f"layout/{self.settings['diode']}.tpl")
+        except:
+            diode = self.jinja_env.get_template("layout/diode.tpl")
         components = []
 
         # Place keyswitches, diodes, vias and traces
-        key_pitch = 19.05
-        diode_offset = [-6.35, 8.89]
+        key_pitch_x = float(self.settings["horz_pitch"])
+        key_pitch_y = float(self.settings["vert_pitch"])
+        diode_offset = [0, 4]
         for key in self.keyboard:
             # Place switch
-            ref_x = -9.525 + key.x_unit * key_pitch
-            ref_y = -9.525 + key.y_unit * key_pitch
+            ref_x = -9.525 + key.x_unit * key_pitch_x
+            ref_y = -9.525 + key.y_unit * key_pitch_y
             render = switch.render(
                 key=key,
                 x=ref_x,
                 y=ref_y,
             )
             components.append(render)
-
+            if self.settings["diode_or"] == "hor":
+                diode_rotation = 0
+            elif self.settings["diode_or"] == "ver":
+                diode_rotation = 90
+            else:
+                diode_rotation = int(self.settings["diode_or"])
             # Place diode
             render = diode.render(
                 num=key.number,
-                x=ref_x + diode_offset[0],
-                y=ref_y + diode_offset[1],
+                x=ref_x + float(self.settings["diode_x"]),
+                y=ref_y + float(self.settings["diode_y"]),
                 diodenetnum=key.diodenetnum,
                 diodenetname=f'"Net-(D{key.number}-Pad2)"',
                 rownetnum=key.rownetnum,
                 rownetname=f"/Row_{key.row}",
+                diode_rotate=diode_rotation,
             )
             components.append(render)
 
