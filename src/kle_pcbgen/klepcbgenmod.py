@@ -137,12 +137,9 @@ class KLEPCBGenerator:
         # Place keyswitches
         for key in self.keyboard:
             render = switch_tpl.render(
-                num=key.number,
+                key=key,
                 x=int(600 + key.x_unit * 800),
                 y=int(800 + key.y_unit * 500),
-                rowNum=key.row,
-                colNum=key.column,
-                width=key.width,
             )
             components.append(render)
         return components
