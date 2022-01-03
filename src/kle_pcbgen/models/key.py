@@ -18,13 +18,12 @@ class Key:
     diodenetnum: int = 0
     colnetnum: int = 0
     rownetnum: int = 0
-    x2_unit: float = None
-    y2_unit: float = None
+    x2_unit: float = 0.0
+    y2_unit: float = 0.0
 
     @property
     def row(self) -> int:
-        #return math.floor(self.y_unit)
-        return round(self.y_unit)
+        return math.floor(self.y_unit)
 
     @property
     def column(self) -> int:
