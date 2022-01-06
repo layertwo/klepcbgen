@@ -20,22 +20,24 @@ class Key:
     rownetnum: int = 0
     x2_unit: float = None
     y2_unit: float = None
+    row: int = -1
+    column: int = -1
 
-    @property
-    def row(self) -> int:
-        #return math.floor(self.y_unit)
-        return round(self.y_unit)
+    # @property
+    # def row(self) -> int:
+    #     #return math.floor(self.y_unit)
+    #     return round(self.y_unit)
 
-    @property
-    def column(self) -> int:
-        return self._column
+    # @property
+    # def column(self) -> int:
+    #     return self._column
 
-    @column.setter
-    def column(self, value: int):
-        if value < 0:
-            self._column = 0
-        else:
-            self._column = value
+    # @column.setter
+    # def column(self, value: int):
+    #     if value < 0:
+    #         self._column = 0
+    #     else:
+    #         self._column = value
 
     def __repr__(self) -> str:
         data = vars(self)

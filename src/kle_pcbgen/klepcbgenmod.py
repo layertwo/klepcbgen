@@ -60,14 +60,47 @@ class KLEPCBGenerator:
 
         if not os.path.exists(self.outname):
             os.mkdir(self.outname)
-
-        self.read_kle_json()
+        # try:
+        #     if self.settings['from_json'] == 'false':
+                #setup keyboard from coordinates.json
+                
+        self.from_coords()
+        # except:
+        #     #self.read_kle_json()
+        #     pass
         self.keyboard.generate_matrix()
         self.generate_schematic()
         self.generate_layout()
         self.generate_project()
 
+    def from_coords(self) -> None:
+        key_pitchx = float(self.settings['horz_pitch'])
+        key_pitchy = float(self.settings['vert_pitch'])
+
+        temp_coords = open('src/kle_pcbgen/coordinates.csv').read().split('\n')
+        coords = []
+        for each in temp_coords:
+            coords.append(each.split(',')) 
+        key_number = 0
+        for coordinate in coords:
+            key = Key(
+                number=key_number,
+                x_unit=float(coordinate[0]),
+                y_unit=float(coordinate[1]),
+                legend='',
+                width=1,
+                height=1,
+                rotation=0,
+                row=int(float(coordinate[0])/key_pitchy),
+                column=int(float(coordinate[1])/key_pitchx),
+                
+            )
+            print(key)
+            key_number += 1
+            self.keyboard.append(key)
+
     def read_kle_json(self) -> None:
+        print('reading json data')
         """Read the provided KLE input file and create a list of all the keyswitches that should
         be on the board"""
 
@@ -190,14 +223,24 @@ class KLEPCBGenerator:
         key_pitchy = float(self.settings['vert_pitch'])
         diode_offset = [0, 4]
         for key in self.keyboard:
-            # Place switch
-            ref_x = -9.525 + key.x_unit * key_pitchx
-            ref_y = -9.525 + key.y_unit * key_pitchy
-            render = switch.render(
-                key=key,
-                x=ref_x,
-                y=ref_y,
-            )
+            if self.settings['from_json'] == 'false':
+                # Place switch
+                ref_x = key.x_unit
+                ref_y = key.y_unit
+                render = switch.render(
+                    key=key,
+                    x=ref_x,
+                    y=ref_y,
+                )
+            else:
+                # Place switch
+                ref_x = -9.525 + key.x_unit * key_pitchx
+                ref_y = -9.525 + key.y_unit * key_pitchy
+                render = switch.render(
+                    key=key,
+                    x=ref_x,
+                    y=ref_y,
+                )
             components.append(render)
             if self.settings['diode_or'] == 'hor':
                 diode_rotation = 0
