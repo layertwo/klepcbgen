@@ -4,4 +4,4 @@ pytest-cov==3.0.0
 mypy==0.910
 pylint==2.11.1
 isort==5.10.0
-black==21.10b0
+black==24.3.0
